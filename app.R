@@ -80,7 +80,7 @@ ui <- fluidPage(
 				' based on reports from state and local health agencies. ',
 				a('R Shiny App', href = 'https://shiny.rstudio.com/', target = '_blank'),
 				' created by ',
-				a('sgorelik', href = 'https://github.com/srgorelik/covid19usa', target = '_blank'),
+				a('srgorelik', href = 'https://github.com/srgorelik/covid19usa', target = '_blank'),
 				' and powered by ',
 				a('shinyapps.io', href = 'https://www.shinyapps.io/', target = '_blank'),
 				'.'
