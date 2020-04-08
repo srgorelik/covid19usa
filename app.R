@@ -107,16 +107,12 @@ server <- function(input, output) {
 		plot_ly(tmp.df, x = ~date, y = ~cases, type = 'bar', name = 'Cases', color = I('red')) %>%
 			add_trace(tmp.df, x = ~date, y = ~deaths, type = 'bar', name = 'Deaths', color = I('black')) %>%
 			layout(barmode = 'overlay',
-				   hovermode = 'x',
-				   autosize = T,
-				   margin = list(l = 0, r = 50, b = 0, t = 70, pad = 4),
-				   legend = list(orientation = 'h', xanchor = 0, x = 0, y = 100),
-				   xaxis = list(title = ''),
-				   yaxis = list(
-				   	title = 'Cumulative Count\n&nbsp;',
-				   	zerolinecolor = toRGB('grey92'),
-				   	tickformat = ',d'
-			))
+				hovermode = 'x',
+				autosize = T,
+				margin = list(l = 0, r = 50, b = 0, t = 70, pad = 4),
+				legend = list(orientation = 'h', xanchor = 0, x = 0, y = 100),
+				xaxis = list(title = ''),
+				yaxis = list(title = 'Cumulative Count\n&nbsp;', zerolinecolor = toRGB('grey92'), tickformat = ',d'))
 	})
 
 }
