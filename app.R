@@ -1,7 +1,7 @@
 #!/usr/bin/env Rscript
 
 # Visualize US Covid-19 cases using NY Times data.
-# R Shiny App by Seth Gorelik..
+# R Shiny App by Seth Gorelik.
 
 library(shiny)
 library(shinythemes)
