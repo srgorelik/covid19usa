@@ -46,13 +46,15 @@ ui <- fluidPage(
 
 	theme = shinytheme('sandstone'),
 
+	br(),
+
 	titlePanel('Covid-19 in the United States'),
 
-	hr(),
+	# hr(),
 
 	sidebarLayout(
 		sidebarPanel(id = 'sidebar', width = 3,
-			p('Select state(s):'),
+			br(),
 			pickerInput(
 				inputId = 'states',
 				label = NULL,
@@ -61,9 +63,10 @@ ui <- fluidPage(
 				options = pickerOptions(
 					actionsBox = T,
 					size = 6,
-					selectedTextFormat = 'count > 3',
+					selectedTextFormat = 'count > 2',
 					liveSearch = T,
-					liveSearchPlaceholder = 'Search state...'
+					liveSearchPlaceholder = 'Search state...',
+					countSelectedText = '{0} states selected'
 				),
 				multiple = T
 			)
@@ -112,7 +115,11 @@ server <- function(input, output) {
 				margin = list(l = 0, r = 50, b = 0, t = 70, pad = 4),
 				legend = list(orientation = 'h', xanchor = 0, x = 0, y = 100),
 				xaxis = list(title = ''),
-				yaxis = list(title = 'Cumulative Count\n&nbsp;', zerolinecolor = toRGB('grey92'), tickformat = ',d'))
+				yaxis = list(title = 'Cumulative Count\n&nbsp;', zerolinecolor = toRGB('grey92'), tickformat = ',d')) %>%
+			config(showTips = F,
+				   displaylogo = F,
+				   modeBarButtonsToRemove = c('zoom2d', 'zoomIn2d', 'zoomOut2d', 'pan2d', 'lasso2d', 'autoScale2d', 'select2d'),
+				   toImageButtonOptions = list(format = 'png', width = 800, height = 425, res = 300, units = 'px'))
 	})
 
 }
