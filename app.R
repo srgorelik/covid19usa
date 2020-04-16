@@ -39,52 +39,55 @@ ui <- fluidPage(
 				background: #f0f0f0;
 				padding: 10px;
 				box-sizing: border-box;
+				text-align: center;
 				font-size: x-small;
 			}'
 		)
 	),
 
-	theme = shinytheme('sandstone'),
+	theme = shinytheme('cosmo'),
 
-	br(),
+	fluidRow(
+		column(12, align = 'center',
 
-	titlePanel('Covid-19 in the United States'),
+			br(), br(),
 
-	# hr(),
+			titlePanel('Covid-19 in the United States'),
 
-	sidebarLayout(
-		sidebarPanel(id = 'sidebar', width = 3,
-			br(),
+			br(), br(),
+
+			plotlyOutput('plotlybarchart', width = '60%'),
+
+			br(), br(),
+
 			pickerInput(
 				inputId = 'states',
 				label = NULL,
+				width = '50%',
 				choices = levels(as.factor(us.df$state)),
 				selected = levels(as.factor(us.df$state)),
+				multiple = T,
 				options = pickerOptions(
 					actionsBox = T,
 					size = 6,
 					selectedTextFormat = 'count > 2',
 					liveSearch = T,
-					liveSearchPlaceholder = 'Search state...',
-					countSelectedText = '{0} states selected'
+					liveSearchPlaceholder = 'Search state/territory...',
+					countSelectedText = '{0} states/territories selected'
 				),
-				multiple = T
 			)
-		),
-		mainPanel(width = 9,
-			plotlyOutput('plotlybarchart')
 		)
 	),
+
 	div(id = 'footer',
 		HTML(
 			paste0(
 				'Data from ',
 				a('The New York Times', href = 'https://github.com/nytimes/covid-19-data', target = '_blank'),
-				' based on reports from state and local health agencies. ',
-				a('R Shiny App', href = 'https://shiny.rstudio.com/', target = '_blank'),
-				' created by ',
+				' based on reports from state and local health agencies, and updated regularly.<br>',
+				'Visualization by ',
 				a('srgorelik', href = 'https://github.com/srgorelik/covid19usa', target = '_blank'),
-				' and powered by ',
+				', powered by ',
 				a('shinyapps.io', href = 'https://www.shinyapps.io/', target = '_blank'),
 				'.'
 			)
