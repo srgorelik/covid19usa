@@ -14,6 +14,7 @@ us.df <- read.csv(url('https://raw.githubusercontent.com/nytimes/covid-19-data/m
 ui <- fluidPage(
 
 	tags$head(
+		tags$meta(name = 'viewport', content = 'max-width=800'), # to force desktop view on mobile device
 		tags$style(
 			type = 'text/css',
 			'.container-fluid {
@@ -30,6 +31,11 @@ ui <- fluidPage(
 			#sidebar {
 				background-color: white;
 				padding: 0px;
+			}
+			#spacer {
+				font-size: 0;
+				height: 50px;
+				line-height: 0;
 			}
 			#footer {
 				position: fixed;
@@ -50,15 +56,15 @@ ui <- fluidPage(
 	fluidRow(
 		column(12, align = 'center',
 
-			br(), br(),
+			div(id = 'spacer'),
 
 			titlePanel('Covid-19 in the United States'),
 
-			br(), br(),
+			div(id = 'spacer'),
 
 			plotlyOutput('plotlybarchart', width = '60%'),
 
-			br(), br(),
+			div(id = 'spacer'),
 
 			pickerInput(
 				inputId = 'states',
@@ -75,7 +81,11 @@ ui <- fluidPage(
 					liveSearchPlaceholder = 'Search state/territory...',
 					countSelectedText = '{0} states/territories selected'
 				),
-			)
+			),
+
+			div(id = 'spacer'),
+			div(id = 'spacer')
+
 		)
 	),
 
