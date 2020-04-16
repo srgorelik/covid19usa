@@ -14,7 +14,7 @@ us.df <- read.csv(url('https://raw.githubusercontent.com/nytimes/covid-19-data/m
 ui <- fluidPage(
 
 	tags$head(
-		tags$meta(name = 'viewport', content = 'max-width=800'), # to force desktop view on mobile device
+		tags$meta(name = 'viewport', content = 'max-width=1000'), # to force desktop view on mobile device
 		tags$style(
 			type = 'text/css',
 			'.container-fluid {
@@ -62,14 +62,14 @@ ui <- fluidPage(
 
 			div(id = 'spacer'),
 
-			plotlyOutput('plotlybarchart', width = '60%'),
+			plotlyOutput('plotlybarchart', width = '650px'),
 
 			div(id = 'spacer'),
 
 			pickerInput(
 				inputId = 'states',
 				label = NULL,
-				width = '50%',
+				width = '250px',
 				choices = levels(as.factor(us.df$state)),
 				selected = levels(as.factor(us.df$state)),
 				multiple = T,
@@ -83,7 +83,6 @@ ui <- fluidPage(
 				),
 			),
 
-			div(id = 'spacer'),
 			div(id = 'spacer')
 
 		)
@@ -125,7 +124,7 @@ server <- function(input, output) {
 			layout(barmode = 'overlay',
 				hovermode = 'x',
 				autosize = T,
-				margin = list(l = 50, r = 50, b = 0, t = 50, pad = 4),
+				margin = list(l = 0, r = 50, b = 0, t = 0, pad = 4),
 				legend = list(orientation = 'h', xanchor = 0, x = 0, y = 100),
 				xaxis = list(title = ''),
 				yaxis = list(title = 'Cumulative Count\n&nbsp;', zerolinecolor = toRGB('grey92'), tickformat = ',d')) %>%
