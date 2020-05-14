@@ -114,11 +114,14 @@ ui <- fluidPage(
 			paste0(
 				'Data from ',
 				a('The New York Times', href = 'https://github.com/nytimes/covid-19-data', target = '_blank'),
-				' based on reports from state and local health agencies, and updated regularly.<br>',
-				'Visualization by ',
+				' based on reports from state and local health agencies, and updated regularly. Visualization by ',
 				a('srgorelik', href = 'https://github.com/srgorelik/covid19usa', target = '_blank'),
 				', powered by ',
 				a('shinyapps.io', href = 'https://www.shinyapps.io/', target = '_blank'),
+				'.<br>If you can, please donate to ',
+				a('Direct Relief', href = 'https://www.directrelief.org/', target = '_blank'),
+				' or your ',
+				a('local food bank', href = 'https://www.feedingamerica.org/', target = '_blank'),
 				'.'
 			)
 		)
