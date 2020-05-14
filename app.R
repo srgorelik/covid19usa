@@ -28,10 +28,6 @@ ui <- fluidPage(
 				color: grey;
 				text-decoration: none;
 			}
-			#sidebar {
-				background-color: white;
-				padding: 0px;
-			}
 			#spacer {
 				font-size: 0;
 				height: 50px;
