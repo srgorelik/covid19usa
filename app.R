@@ -3,6 +3,12 @@
 # Visualize US Covid-19 cases using NY Times data.
 # R Shiny App by Seth Gorelik.
 
+#TODO
+# - busy message
+# - improve compare states (choose date to compare not just most recent numbers)
+# - survival/recovery rate?
+# - add county-level map?
+
 library(shiny)
 library(shinythemes)
 library(shinyWidgets)
@@ -92,13 +98,52 @@ ui <- fluidPage(
 					liveSearchPlaceholder = 'Search state/territory...',
 					countSelectedText = '{0} selected'
 				),
+			),
+
+			# conditionalPanel(
+			# 	condition = "input.timeSeriesType != '7-day Average'",
+			# 	div(style = "display: inline-block; vertical-align: top; padding-right: 20px;",
+			# 		p('Combine')
+			# 	),
+			# 	div(style = "display: inline-block;vertical-align:top;",
+			# 		materialSwitch(
+			# 			inputId = 'compareStates',
+			# 			label = NULL,
+			# 			status = 'default',
+			# 			inline = T
+			# 		)
+			# 	),
+			# 	div(style = "display: inline-block; vertical-align:top; padding-left: 4px;",
+			# 		p('Compare')
+			# 	)
+			# ),
+
+			conditionalPanel(
+				condition = "input.timeSeriesType != '7-day Average'",
+				materialSwitch(
+					inputId = 'compareStates',
+					label = 'Compare',
+					status = 'default'
+				)
+			),
+
+			conditionalPanel(
+				condition = "input.compareStates && (input.states.length < 2)",
+				p('Must select at least two states/territories to compare.', style = 'color: red;')
 			)
 
 		),
 
 		mainPanel(
 			width = 9,
-			plotlyOutput('plot')
+			conditionalPanel(
+				condition = "input.compareStates && (input.states.length >= 2) && (input.timeSeriesType != '7-day Average')",
+				plotlyOutput(outputId = 'plotStatesComparison', height = '550px', width = '80%')
+			),
+			conditionalPanel(
+				condition = "!input.compareStates || (input.timeSeriesType == '7-day Average')",
+				plotlyOutput(outputId = 'plotStatesCombined')
+			)
 		)
 	),
 
@@ -129,16 +174,16 @@ server <- function(input, output) {
 	subset.data <- reactive({
 		req(input$states)
 		us.df %>%
-			rename(cum_cases = cases, cum_deaths = deaths) %>%
-			mutate(date = as.Date(date, format = '%Y-%m-%d')) %>%
 			filter((state %in% input$states)) %>%
 			as.data.frame()
 	})
 
-	output$plot <- renderPlotly({
+	output$plotStatesCombined <- renderPlotly({
 
-		tmp.df <- subset.data() %>%
+		combined.df <- subset.data() %>%
 			select(-state, -fips) %>%
+			rename(cum_cases = cases, cum_deaths = deaths) %>%
+			mutate(date = as.Date(date, format = '%Y-%m-%d')) %>%
 			group_by(date) %>%
 			summarize_all(sum) %>%
 			arrange(date) %>%
@@ -154,56 +199,8 @@ server <- function(input, output) {
 			) %>%
 			as.data.frame()
 
-		# not sure if "survival rate" is accurate
-		surv.rate <- plot_ly(tmp.df, x = ~date, y = ~cum_s2c_rate, type = 'scatter', mode = 'lines', name = 'Deaths', color = I('red3'), hovertext = paste0(tmp.df$cum_s2c_rate, '%'), hoverinfo = 'text+x', showlegend = F) %>%
-			layout(hovermode = 'x',
-				   autosize = T,
-				   margin = list(l = 0, r = 50, b = 0, t = 0, pad = 4),
-				   legend = list(orientation = 'h', xanchor = 0, x = 0, y = 100, traceorder = 'reversed'),
-				   xaxis = list(title = '', range = c(as.Date('2020-02-28', format = '%Y-%m-%d'), max(tmp.df$date))),
-				   yaxis = list(title = 'Survival Rate\n&nbsp;', zerolinecolor = toRGB('grey92'), tickformat = '.1f', ticksuffix = '%', showticksuffix = 'all')) %>%
-			config(showTips = F,
-				   displaylogo = F,
-				   modeBarButtonsToRemove = c('hoverCompareCartesian', 'hoverClosestCartesian', 'toImage', 'zoom2d', 'zoomIn2d', 'zoomOut2d', 'pan2d', 'lasso2d', 'autoScale2d', 'select2d'))
-
-		death.rate <- plot_ly(tmp.df, x = ~date, y = ~cum_d2c_rate, type = 'scatter', mode = 'lines', name = 'Deaths', color = I('grey30'), hovertext = paste0(tmp.df$cum_d2c_rate, '%'), hoverinfo = 'text+x', showlegend = F) %>%
-			layout(hovermode = 'x',
-				   autosize = T,
-				   margin = list(l = 0, r = 50, b = 0, t = 0, pad = 4),
-				   legend = list(orientation = 'h', xanchor = 0, x = 0, y = 100, traceorder = 'reversed'),
-				   xaxis = list(title = '', range = c(as.Date('2020-02-28', format = '%Y-%m-%d'), max(tmp.df$date))),
-				   yaxis = list(title = 'Death Rate\n&nbsp;', zerolinecolor = toRGB('grey92'), tickformat = '.1f', ticksuffix = '%', showticksuffix = 'all')) %>%
-			config(showTips = F,
-				   displaylogo = F,
-				   modeBarButtonsToRemove = c('hoverCompareCartesian', 'hoverClosestCartesian', 'toImage', 'zoom2d', 'zoomIn2d', 'zoomOut2d', 'pan2d', 'lasso2d', 'autoScale2d', 'select2d'))
-
-		daily.lines <- plot_ly(tmp.df, x = ~date, y = ~daily_deaths_7day_mean, type = 'scatter', mode = 'lines', name = 'Deaths', color = I('black'), hovertext = scales::comma(tmp.df$daily_deaths_7day_mean), hoverinfo = 'text+x') %>%
-			add_trace(tmp.df, x = ~date, y = ~daily_cases_7day_mean, type = 'scatter', mode = 'lines', name = 'Cases', color = I('red'), hovertext = scales::comma(tmp.df$daily_cases_7day_mean), hoverinfo = 'text+x') %>%
-			layout(hovermode = 'x',
-				   autosize = T,
-				   margin = list(l = 0, r = 50, b = 0, t = 0, pad = 4),
-				   legend = list(orientation = 'h', xanchor = 0, x = 0, y = 100, traceorder = 'reversed'),
-				   xaxis = list(title = ''),
-				   yaxis = list(title = '7-day Average Count\n&nbsp;', zerolinecolor = toRGB('grey92'), tickformat = ',d')) %>%
-			config(showTips = F,
-				   displaylogo = F,
-				   modeBarButtonsToRemove = c('hoverCompareCartesian', 'hoverClosestCartesian', 'toImage', 'zoom2d', 'zoomIn2d', 'zoomOut2d', 'pan2d', 'lasso2d', 'autoScale2d', 'select2d'))
-
-		daily.bars <- plot_ly(tmp.df, x = ~date, y = ~daily_cases, type = 'bar', name = 'Cases', color = I('red'), hovertext = scales::comma(tmp.df$daily_cases), hoverinfo = 'text+x') %>%
-			add_trace(tmp.df, x = ~date, y = ~daily_deaths, type = 'bar', name = 'Deaths', color = I('black'), hovertext = scales::comma(tmp.df$daily_deaths), hoverinfo = 'text+x') %>%
-			layout(barmode = 'overlay',
-				   hovermode = 'x',
-				   autosize = T,
-				   margin = list(l = 0, r = 50, b = 0, t = 0, pad = 4),
-				   legend = list(orientation = 'h', xanchor = 0, x = 0, y = 100),
-				   xaxis = list(title = ''),
-				   yaxis = list(title = 'Count\n&nbsp;', zerolinecolor = toRGB('grey92'), tickformat = ',d')) %>%
-			config(showTips = F,
-				   displaylogo = F,
-				   modeBarButtonsToRemove = c('hoverCompareCartesian', 'hoverClosestCartesian', 'toImage', 'zoom2d', 'zoomIn2d', 'zoomOut2d', 'pan2d', 'lasso2d', 'autoScale2d', 'select2d'))
-
-		cum.bars <- plot_ly(tmp.df, x = ~date, y = ~cum_cases, type = 'bar', name = 'Cases', color = I('red'), hovertext = scales::comma(tmp.df$cum_cases), hoverinfo = 'text+x') %>%
-			add_trace(tmp.df, x = ~date, y = ~cum_deaths, type = 'bar', name = 'Deaths', color = I('black'), hovertext = scales::comma(tmp.df$cum_deaths), hoverinfo = 'text+x') %>%
+		cum.bars <- plot_ly(combined.df, x = ~date, y = ~cum_cases, type = 'bar', name = 'Cases', color = I('red'), hovertext = scales::comma(combined.df$cum_cases), hoverinfo = 'text+x') %>%
+			add_trace(combined.df, x = ~date, y = ~cum_deaths, type = 'bar', name = 'Deaths', color = I('black'), hovertext = scales::comma(combined.df$cum_deaths), hoverinfo = 'text+x') %>%
 			layout(barmode = 'overlay',
 				   hovermode = 'x',
 				   autosize = T,
@@ -215,12 +212,126 @@ server <- function(input, output) {
 				   displaylogo = F,
 				   modeBarButtonsToRemove = c('hoverCompareCartesian', 'hoverClosestCartesian', 'toImage', 'zoom2d', 'zoomIn2d', 'zoomOut2d', 'pan2d', 'lasso2d', 'autoScale2d', 'select2d'))
 
+		daily.bars <- plot_ly(combined.df, x = ~date, y = ~daily_cases, type = 'bar', name = 'Cases', color = I('red'), hovertext = scales::comma(combined.df$daily_cases), hoverinfo = 'text+x') %>%
+			add_trace(combined.df, x = ~date, y = ~daily_deaths, type = 'bar', name = 'Deaths', color = I('black'), hovertext = scales::comma(combined.df$daily_deaths), hoverinfo = 'text+x') %>%
+			layout(barmode = 'overlay',
+				   hovermode = 'x',
+				   autosize = T,
+				   margin = list(l = 0, r = 50, b = 0, t = 0, pad = 4),
+				   legend = list(orientation = 'h', xanchor = 0, x = 0, y = 100),
+				   xaxis = list(title = ''),
+				   yaxis = list(title = 'Count\n&nbsp;', zerolinecolor = toRGB('grey92'), tickformat = ',d')) %>%
+			config(showTips = F,
+				   displaylogo = F,
+				   modeBarButtonsToRemove = c('hoverCompareCartesian', 'hoverClosestCartesian', 'toImage', 'zoom2d', 'zoomIn2d', 'zoomOut2d', 'pan2d', 'lasso2d', 'autoScale2d', 'select2d'))
+
+		daily.lines <- plot_ly(combined.df, x = ~date, y = ~daily_deaths_7day_mean, type = 'scatter', mode = 'lines', name = 'Deaths', color = I('black'), hovertext = scales::comma(combined.df$daily_deaths_7day_mean), hoverinfo = 'text+x') %>%
+			add_trace(combined.df, x = ~date, y = ~daily_cases_7day_mean, type = 'scatter', mode = 'lines', name = 'Cases', color = I('red'), hovertext = scales::comma(combined.df$daily_cases_7day_mean), hoverinfo = 'text+x') %>%
+			layout(hovermode = 'x',
+				   autosize = T,
+				   margin = list(l = 0, r = 50, b = 0, t = 0, pad = 4),
+				   legend = list(orientation = 'h', xanchor = 0, x = 0, y = 100, traceorder = 'reversed'),
+				   xaxis = list(title = ''),
+				   yaxis = list(title = '7-day Average Count\n&nbsp;', zerolinecolor = toRGB('grey92'), tickformat = ',d')) %>%
+			config(showTips = F,
+				   displaylogo = F,
+				   modeBarButtonsToRemove = c('hoverCompareCartesian', 'hoverClosestCartesian', 'toImage', 'zoom2d', 'zoomIn2d', 'zoomOut2d', 'pan2d', 'lasso2d', 'autoScale2d', 'select2d'))
+
+		death.rate <- plot_ly(combined.df, x = ~date, y = ~cum_d2c_rate, type = 'scatter', mode = 'lines', name = 'Deaths', color = I('grey30'), hovertext = paste0(combined.df$cum_d2c_rate, '%'), hoverinfo = 'text+x', showlegend = F) %>%
+			layout(hovermode = 'x',
+				   autosize = T,
+				   margin = list(l = 0, r = 50, b = 0, t = 0, pad = 4),
+				   legend = list(orientation = 'h', xanchor = 0, x = 0, y = 100, traceorder = 'reversed'),
+				   xaxis = list(title = '', range = c(as.Date('2020-02-28', format = '%Y-%m-%d'), max(combined.df$date))),
+				   yaxis = list(title = 'Death Rate\n&nbsp;', zerolinecolor = toRGB('grey92'), tickformat = '.1f', ticksuffix = '%', showticksuffix = 'all')) %>%
+			config(showTips = F,
+				   displaylogo = F,
+				   modeBarButtonsToRemove = c('hoverCompareCartesian', 'hoverClosestCartesian', 'toImage', 'zoom2d', 'zoomIn2d', 'zoomOut2d', 'pan2d', 'lasso2d', 'autoScale2d', 'select2d'))
+
+		# not sure if "survival rate" is accurate; don't include for now...
+		surv.rate <- plot_ly(combined.df, x = ~date, y = ~cum_s2c_rate, type = 'scatter', mode = 'lines', name = 'Deaths', color = I('red3'), hovertext = paste0(combined.df$cum_s2c_rate, '%'), hoverinfo = 'text+x', showlegend = F) %>%
+			layout(hovermode = 'x',
+				   autosize = T,
+				   margin = list(l = 0, r = 50, b = 0, t = 0, pad = 4),
+				   legend = list(orientation = 'h', xanchor = 0, x = 0, y = 100, traceorder = 'reversed'),
+				   xaxis = list(title = '', range = c(as.Date('2020-02-28', format = '%Y-%m-%d'), max(combined.df$date))),
+				   yaxis = list(title = 'Survival Rate\n&nbsp;', zerolinecolor = toRGB('grey92'), tickformat = '.1f', ticksuffix = '%', showticksuffix = 'all')) %>%
+			config(showTips = F,
+				   displaylogo = F,
+				   modeBarButtonsToRemove = c('hoverCompareCartesian', 'hoverClosestCartesian', 'toImage', 'zoom2d', 'zoomIn2d', 'zoomOut2d', 'pan2d', 'lasso2d', 'autoScale2d', 'select2d'))
+
 		if (input$timeSeriesType == 'Total Count') {
 			cum.bars
 		} else if (input$timeSeriesType == 'Daily Count') {
 			daily.bars
 		} else if (input$timeSeriesType == '7-day Average') {
 			daily.lines
+		} else if (input$timeSeriesType == 'Death Rate') {
+			death.rate
+		}
+
+	})
+
+	output$plotStatesComparison <- renderPlotly({
+
+		states.df <- subset.data() %>%
+			select(-fips) %>%
+			rename(cum_cases = cases, cum_deaths = deaths) %>%
+			mutate(date = as.Date(date, format = '%Y-%m-%d')) %>%
+			group_by(state) %>%
+			arrange(date) %>%
+			mutate(
+				daily_cases = c(cum_cases[1], (cum_cases - lag(cum_cases))[-1]),
+				daily_deaths = c(cum_deaths[1], (cum_deaths - lag(cum_deaths))[-1]),
+				cum_d2c_rate = round(cum_deaths/cum_cases*100, 2)
+			) %>%
+			filter(date == max(date)) %>%
+			as.data.frame()
+
+		date.str <- format(max(states.df$date), '%B %d, %Y')
+		n.states <- nrow(states.df)
+		fontsize <- ifelse(n.states >= 25, 8, 12)
+
+		cum.bars <- plot_ly(states.df, x = ~cum_cases, y = ~reorder(state, cum_cases), type = 'bar', orientation = 'h', name = 'Cases', color = I('red'), hovertext = scales::comma(states.df$cum_cases), hoverinfo = 'text+y') %>%
+			add_trace(states.df, x = ~cum_deaths, y = ~reorder(state, cum_cases), type = 'bar', orientation = 'h', name = 'Deaths', color = I('black'), hovertext = scales::comma(states.df$cum_deaths), hoverinfo = 'text+y') %>%
+			layout(barmode = 'overlay',
+				   hovermode = 'y',
+				   autosize = T,
+				   margin = list(l = 0, r = 50, b = 0, t = 0, pad = 4),
+				   legend = list(orientation = 'h', xanchor = 0, x = 0, y = 100, itemclick = F),
+				   xaxis = list(title = paste('\nCumulative count as of', date.str), zerolinecolor = toRGB('grey92'), tickformat = ',d'),
+				   yaxis = list(title = '', tickfont = list(size = fontsize), tickmode = 'linear', tick0 = 0, dtick = 1)) %>% # necessary for printing all state names
+			config(showTips = F,
+				   displaylogo = F,
+				   modeBarButtonsToRemove = c('hoverCompareCartesian', 'hoverClosestCartesian', 'toImage', 'zoom2d', 'zoomIn2d', 'zoomOut2d', 'pan2d', 'lasso2d', 'autoScale2d', 'select2d'))
+
+		daily.bars <- plot_ly(states.df, x = ~daily_cases, y = ~reorder(state, daily_cases), type = 'bar', orientation = 'h', name = 'Cases', color = I('red'), hovertext = scales::comma(states.df$daily_cases), hoverinfo = 'text+y') %>%
+			add_trace(states.df, x = ~daily_deaths, y = ~reorder(state, daily_cases), type = 'bar', orientation = 'h', name = 'Deaths', color = I('black'), hovertext = scales::comma(states.df$daily_deaths), hoverinfo = 'text+y') %>%
+			layout(barmode = 'overlay',
+				   hovermode = 'y',
+				   autosize = T,
+				   margin = list(l = 0, r = 50, b = 0, t = 0, pad = 4),
+				   legend = list(orientation = 'h', xanchor = 0, x = 0, y = 100, itemclick = F),
+				   xaxis = list(title = paste('\nDaily count for', date.str), zerolinecolor = toRGB('grey92'), tickformat = ',d'),
+				   yaxis = list(title = '', tickfont = list(size = fontsize), tickmode = 'linear', tick0 = 0, dtick = 1)) %>% # necessary for printing all state names
+			config(showTips = F,
+				   displaylogo = F,
+				   modeBarButtonsToRemove = c('hoverCompareCartesian', 'hoverClosestCartesian', 'toImage', 'zoom2d', 'zoomIn2d', 'zoomOut2d', 'pan2d', 'lasso2d', 'autoScale2d', 'select2d'))
+
+		death.rate <- plot_ly(states.df, x = ~cum_d2c_rate, y = ~reorder(state, cum_d2c_rate), type = 'bar', orientation = 'h', name = 'Deaths', color = I('grey30'), hovertext = paste0(states.df$cum_d2c_rate, '%'), hoverinfo = 'text+y', showlegend = F) %>%
+			layout(hovermode = 'y',
+				   autosize = T,
+				   margin = list(l = 0, r = 50, b = 0, t = 0, pad = 4),
+				   xaxis = list(title = paste('\nDeath rate as of', date.str), zerolinecolor = toRGB('grey92'), tickformat = '.1f', ticksuffix = '%', showticksuffix = 'all'),
+				   yaxis = list(title = '', tickfont = list(size = fontsize), tickmode = 'linear', tick0 = 0, dtick = 1)) %>%
+			config(showTips = F,
+				   displaylogo = F,
+				   modeBarButtonsToRemove = c('hoverCompareCartesian', 'hoverClosestCartesian', 'toImage', 'zoom2d', 'zoomIn2d', 'zoomOut2d', 'pan2d', 'lasso2d', 'autoScale2d', 'select2d'))
+
+		if (input$timeSeriesType == 'Total Count') {
+			cum.bars
+		} else if (input$timeSeriesType == 'Daily Count') {
+			daily.bars
 		} else if (input$timeSeriesType == 'Death Rate') {
 			death.rate
 		}
